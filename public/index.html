@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GLB Renderer Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .upload-area { border: 2px dashed #ccc; padding: 20px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Puppeteer GLB Renderer</h1>
+        <p>Status: <span id="status">Checking...</span></p>
+        
+        <div class="upload-area">
+            <h3>Upload GLB File</h3>
+            <input type="file" id="fileInput" accept=".glb,.gltf">
+            <br><br>
+            <button onclick="uploadFile()">Upload & Render</button>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // Check status on load
+        fetch('/health')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('status').textContent = 
+                    `${data.status} - Renderer: ${data.renderer}`;
+            });
+
+        function uploadFile() {
+            const file = document.getElementById('fileInput').files[0];
+            if (!file) {
+                alert('Please select a GLB file');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('glb', file);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+                console.log('Upload result:', data);
+                if (data.filename) {
+                    renderGLB(data.filename);
+                }
+            });
+        }
+
+        function renderGLB(filename) {
+            fetch('/render', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    filename: filename,
+                    views: ['front', 'back', 'left', 'right']
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                console.log('Render result:', data);
+                displayResults(data);
+            });
+        }
+
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            if (data.renders) {
+                resultsDiv.innerHTML = '<h3>Rendered Images:</h3>' + 
+                    data.renders.map(r => 
+                        `<div><h4>${r.view}</h4><img src="${r.url}" style="max-width:300px;"/></div>`
+                    ).join('');
+            }
+        }
+    </script>
+</body>
+</html>

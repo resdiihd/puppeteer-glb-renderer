@@ -1,0 +1,52 @@
+# Optimized for Google Cloud Run
+FROM node:18-bullseye-slim
+
+# Install system dependencies including Chrome
+RUN apt-get update && apt-get install -y \
+    wget gnupg ca-certificates procps libxss1 libgconf-2-4 \
+    fonts-liberation libappindicator3-1 libasound2 libatk-bridge2.0-0 \
+    libdrm2 libxcomposite1 libxdamage1 libxrandr2 libgbm1 \
+    libgtkd-3-0 libxshmfence1 --no-install-recommends \
+    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-khmeros fonts-kacst fonts-freefont-ttf \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install Node.js dependencies
+RUN npm ci --only=production && npm cache clean --force
+
+# Copy application code
+COPY src/ ./src/
+COPY storage/ ./storage/
+
+# Set Chrome executable path for Puppeteer
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
+ENV NODE_ENV=production
+
+# Cloud Run uses PORT environment variable
+ENV PORT=8080
+
+# Create non-root user for security
+RUN groupadd -r pptruser && useradd -r -g pptruser -G audio,video pptruser \
+    && mkdir -p /home/pptruser/Downloads \
+    && chown -R pptruser:pptruser /app \
+    && chown -R pptruser:pptruser /home/pptruser
+
+# Switch to non-root user
+USER pptruser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
+
+# Expose port
+EXPOSE 8080
+
+# Start the application
+CMD ["npm", "start"]

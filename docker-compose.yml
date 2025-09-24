@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  puppeteer-glb-renderer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: puppeteer-glb-renderer
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./storage:/app/storage
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    environment:
+      - NODE_ENV=production
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=false
+      - PUPPETEER_EXECUTABLE_PATH=/home/pptruser/.cache/puppeteer/chrome/linux-*/chrome-linux*/chrome
+    shm_size: 2gb
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - glb-renderer-network
+
+networks:
+  glb-renderer-network:
+    driver: bridge
+
+volumes:
+  storage:
+    driver: local

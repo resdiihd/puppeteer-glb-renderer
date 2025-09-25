@@ -1,6 +1,6 @@
-# 🎨 Puppeteer GLB Renderer
+# Production GLB Renderer with Docker & Nginx
 
-**Advanced Server-Side GLB Rendering with Full Feature Support**
+Hệ thống render GLB/GLTF server-side với Docker container, Nginx reverse proxy, SSL support và clean architecture.
 
 ## 🌟 Features
 

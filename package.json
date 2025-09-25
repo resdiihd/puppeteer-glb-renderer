@@ -1,43 +1,59 @@
 {
-  "name": "puppeteer-glb-renderer",
-  "version": "1.0.0",
-  "description": "Advanced Puppeteer-based GLB renderer with full feature support",
-  "main": "src/server.js",
+  "name": "glb-renderer-production",
+  "version": "2.0.0",
+  "description": "Production-ready GLB renderer with Nginx reverse proxy and clean architecture",
+  "main": "src/app.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
     "build": "docker-compose build",
     "up": "docker-compose up -d",
     "down": "docker-compose down",
     "logs": "docker-compose logs -f",
-    "test": "node src/test.js"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint src/",
+    "health": "curl -f http://localhost:3000/health || exit 1"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "puppeteer": "^21.3.8",
-    "multer": "^1.4.5-lts.1",
-    "uuid": "^9.0.1",
-    "sharp": "^0.32.6",
-    "ffmpeg-static": "^5.2.0",
+    "express": "^4.21.0",
+    "puppeteer": "^23.5.0",
+    "multer": "^2.0.0",
+    "uuid": "^10.0.0",
     "cors": "^2.8.5",
-    "helmet": "^7.1.0",
-    "ws": "^8.14.2",
-    "node-cron": "^3.0.2",
-    "fs-extra": "^11.1.1",
-    "axios": "^1.6.0"
+    "helmet": "^8.0.0",
+    "winston": "^3.14.0",
+    "express-rate-limit": "^7.4.1",
+    "express-validator": "^7.2.0",
+    "pm2": "^5.4.2"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.1.5",
+    "eslint": "^9.12.0"
   },
   "keywords": [
     "glb",
+    "gltf",
     "3d",
     "renderer",
     "puppeteer",
     "server-side",
     "webgl",
-    "three.js"
+    "three.js",
+    "nginx",
+    "docker",
+    "production"
   ],
-  "author": "GLB Renderer Team",
-  "license": "MIT"
+  "author": "3D Tour Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/glb-renderer-production.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/glb-renderer-production/issues"
+  },
+  "homepage": "https://3d.itsoa.io.vn"
 }

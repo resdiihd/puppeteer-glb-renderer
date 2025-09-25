@@ -1,94 +1,59 @@
-# Use Node.js 18 with full features for Puppeteer
-FROM node:18-bullseye-slim
+# Multi-stage Docker build for GLB Renderer with Nginx
+FROM node:18-alpine AS node-builder
 
-# Install Chrome dependencies and FFmpeg for video processing
-RUN apt-get update && apt-get install -y \
-    wget \
-    gnupg \
-    ca-certificates \
-    procps \
-    libxss1 \
-    libgconf-2-4 \
-    libxcomposite1 \
-    libasound2 \
-    libatk1.0-0 \
-    libc6 \
-    libcairo2 \
-    libcups2 \
-    libdbus-1-3 \
-    libexpat1 \
-    libfontconfig1 \
-    libgcc1 \
-    libgconf-2-4 \
-    libgdk-pixbuf2.0-0 \
-    libglib2.0-0 \
-    libgtk-3-0 \
-    libnspr4 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libstdc++6 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxcb1 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxi6 \
-    libxrandr2 \
-    libxrender1 \
-    libxss1 \
-    libxtst6 \
-    fonts-liberation \
-    libappindicator1 \
-    libnss3 \
-    lsb-release \
-    xdg-utils \
-    ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Install Node.js dependencies
+RUN npm ci --omit=dev && npm cache clean --force
+
+# Copy application source
+COPY src/ ./src/
+
+# Create storage directories
+RUN mkdir -p storage/uploads storage/renders
+
+FROM nginx:alpine AS production
+
+# Install Node.js in Nginx container
+RUN apk add --no-cache nodejs npm chromium nss freetype freetype-dev harfbuzz ca-certificates ttf-freefont curl
 
 # Create app directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy Node.js application from builder stage
+COPY --from=node-builder /app /app
 
-# Install Node.js dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Copy Nginx configuration
+COPY docker/nginx.conf /etc/nginx/nginx.conf
+COPY docker/default.conf /etc/nginx/conf.d/default.conf
 
-# Create a user to run Puppeteer (security best practice)
-RUN groupadd -r pptruser && useradd -r -g pptruser -G audio,video pptruser \
-    && mkdir -p /home/pptruser/Downloads \
-    && chown -R pptruser:pptruser /home/pptruser \
-    && chown -R pptruser:pptruser /app
+# Create nginx user and set permissions (nginx user already exists in alpine image)
+RUN chown -R nginx:nginx /app/storage /var/cache/nginx /var/log/nginx || true
+RUN chmod -R 755 /app/storage
 
-# Copy application code
-COPY src/ ./src/
-COPY storage/ ./storage/
+# Install PM2 globally for process management
+RUN npm install -g pm2
 
-# Set permissions
-RUN chown -R pptruser:pptruser /app
+# Copy PM2 ecosystem configuration
+COPY docker/ecosystem.config.js /app/
 
-    # Install Chrome browser (not via Puppeteer)
-    RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
-        && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
-        && apt-get update \
-        && apt-get install -y google-chrome-stable fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-khmeros fonts-kacst fonts-freefont-ttf libxss1 \
-        && rm -rf /var/lib/apt/lists/*
+# Copy startup script
+COPY docker/start.sh /app/docker/start.sh
+RUN chmod +x /app/docker/start.sh
 
-    # Set Chrome executable path for Puppeteer
-    ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome
+# Set Puppeteer to use system Chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
-    # Switch to non-root user
-    USER pptruser
+# Expose ports
+EXPOSE 80 443
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:3000/health || exit 1
+    CMD curl -f http://localhost/health || exit 1
 
-# Expose port
-EXPOSE 3000
-
-# Start the application
-CMD ["npm", "start"]
+# Start services
+CMD ["/app/docker/start.sh"]

@@ -1,35 +1,61 @@
 version: '3.8'
 
 services:
-  puppeteer-glb-renderer:
+  glb-renderer:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: puppeteer-glb-renderer
+    container_name: glb-renderer-production
+    restart: unless-stopped
     ports:
-      - "3000:3000"
-    volumes:
-      - ./storage:/app/storage
-      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - "80:80"
+      - "443:443"
     environment:
       - NODE_ENV=production
-      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=false
-      - PUPPETEER_EXECUTABLE_PATH=/home/pptruser/.cache/puppeteer/chrome/linux-*/chrome-linux*/chrome
-    shm_size: 2gb
-    restart: unless-stopped
+      - PORT=3000
+      - HOST=0.0.0.0
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+      - DOMAIN=3d.itsoa.io.vn
+      - CLOUDFLARE_TOKEN=3YeqmF46MSojOcJ6zi7rjlQpyKZGC-cXRLgO_AWj
+    volumes:
+      - glb_storage:/app/storage
+      - nginx_logs:/var/log/nginx
+      - pm2_logs:/var/log/pm2
+      - ssl_certs:/etc/ssl/certs:ro
+      - ssl_private:/etc/ssl/private:ro
+    networks:
+      - glb_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    networks:
-      - glb-renderer-network
-
-networks:
-  glb-renderer-network:
-    driver: bridge
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - SETGID
+      - SETUID
+      - NET_BIND_SERVICE
+    shm_size: 2gb
 
 volumes:
-  storage:
+  glb_storage:
     driver: local
+  nginx_logs:
+    driver: local
+  pm2_logs:
+    driver: local
+  ssl_certs:
+    driver: local
+  ssl_private:
+    driver: local
+
+networks:
+  glb_network:
+    driver: bridge

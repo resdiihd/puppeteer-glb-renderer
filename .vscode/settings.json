@@ -1,0 +1,39 @@
+{
+    "terminal.integrated.profiles.windows": {
+        "PowerShell": {
+            "source": "PowerShell",
+            "icon": "terminal-powershell"
+        },
+        "Command Prompt": {
+            "path": [
+                "${env:windir}\\Sysnative\\cmd.exe",
+                "${env:windir}\\System32\\cmd.exe"
+            ],
+            "args": [],
+            "icon": "terminal-cmd"
+        },
+        "Git Bash": {
+            "source": "Git Bash"
+        },
+        "PuTTY SSH": {
+            "path": "C:\\Program Files\\PuTTY\\putty.exe",
+            "args": [
+                "-ssh",
+                "root@34.142.244.25",
+                "-P", "22"
+            ],
+            "icon": "server"
+        },
+        "PuTTY SSH (Interactive)": {
+            "path": "C:\\Program Files\\PuTTY\\plink.exe",
+            "args": [
+                "-ssh",
+                "root@34.142.244.25",
+                "-P", "22",
+                "-t"
+            ],
+            "icon": "terminal"
+        }
+    },
+    "terminal.integrated.defaultProfile.windows": "PowerShell"
+}

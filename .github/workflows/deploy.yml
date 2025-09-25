@@ -1,0 +1,66 @@
+# GitHub Actions Workflow for Auto Deployment
+name: 🚀 Auto Deploy to Google Cloud VM
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+    types: [closed]
+
+jobs:
+  deploy:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    runs-on: ubuntu-latest
+    name: 🎯 Deploy to Production VM
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      
+    - name: 🔧 Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.VM_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+        chmod 600 ~/.ssh/id_ed25519
+        ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
+        
+    - name: 🎯 Deploy to VM
+      run: |
+        ssh -i ~/.ssh/id_ed25519 root@${{ secrets.VM_HOST }} '
+          echo "🚀 Starting deployment from GitHub Actions..."
+          
+          # Check if auto-deploy script exists
+          if [ ! -f "/opt/auto-deploy.sh" ]; then
+            echo "❌ Auto-deploy script not found"
+            exit 1
+          fi
+          
+          # Run auto-deploy script
+          chmod +x /opt/auto-deploy.sh
+          /opt/auto-deploy.sh
+          
+          echo "✅ Deployment completed successfully"
+        '
+        
+    - name: 🏥 Health Check
+      run: |
+        sleep 10
+        
+        # Test if service is responding
+        if curl -f -s --max-time 30 http://${{ secrets.VM_HOST }}:3000/health; then
+          echo "✅ Health check passed"
+        else
+          echo "❌ Health check failed"
+          exit 1
+        fi
+        
+    - name: 📊 Deployment Summary
+      run: |
+        echo "🎊 Deployment Summary:"
+        echo "- Repository: ${{ github.repository }}"
+        echo "- Branch: ${{ github.ref_name }}"
+        echo "- Commit: ${{ github.sha }}"
+        echo "- Author: ${{ github.actor }}"
+        echo "- VM: ${{ secrets.VM_HOST }}:3000"
+        echo "- Time: $(date)"

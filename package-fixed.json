@@ -1,0 +1,25 @@
+{
+  "name": "puppeteer-glb-renderer",
+  "version": "1.0.0",
+  "description": "Advanced Server-Side GLB Rendering with Puppeteer",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "node src/test.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "puppeteer": "^23.5.0",
+    "multer": "^2.0.0-beta.1",
+    "three": "^0.169.0",
+    "uuid": "^10.0.0",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

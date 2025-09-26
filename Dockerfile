@@ -18,26 +18,24 @@ RUN mkdir -p storage/uploads storage/renders
 FROM nginx:alpine AS production
 
 # Install Node.js in Nginx container
-# Install Node.js and SSL tools
-RUN apk add --no-cache \
-    nodejs \
-    npm \
-    chromium \
-    nss \
-    freetype \
-    freetype-dev \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont \
-    curl \
-    bash \
-    openssl \
-    certbot \
-    py3-pip \
-    cronie \
-    && pip3 install certbot-dns-cloudflare
-
-# Create app directory
+    # Install Node.js and SSL tools
+    RUN apk add --no-cache \
+        nodejs \
+        npm \
+        chromium \
+        nss \
+        freetype \
+        freetype-dev \
+        harfbuzz \
+        ca-certificates \
+        ttf-freefont \
+        curl \
+        bash \
+        openssl \
+        certbot \
+        py3-pip \
+        py3-certbot-dns-cloudflare \
+        cronie# Create app directory
 WORKDIR /app
 
 # Copy Node.js application from builder stage

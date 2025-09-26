@@ -18,10 +18,10 @@ echo "  - SSL: $([ -n "$CLOUDFLARE_API_TOKEN" ] && echo "Enabled (Cloudflare)" |
 # Create necessary directories
 mkdir -p /app/storage/uploads /app/storage/renders /var/log/nginx /var/log/pm2 /etc/ssl/certs /etc/ssl/private /acme
 
-# Set proper permissions (nginx user exists in Alpine)
-chown -R nginx:nginx /var/log/nginx /acme || true
-chown -R nginx:nginx /app/storage /var/log/pm2 || true
-chmod -R 755 /app/storage
+# Set proper permissions (use || true to not fail on permission errors)
+chown -R nginx:nginx /var/log/nginx /acme 2>/dev/null || true
+chown -R nginx:nginx /app/storage /var/log/pm2 2>/dev/null || true
+chmod -R 755 /app/storage 2>/dev/null || echo "⚠️ Storage permissions set by host, continuing..."
 
 # SSL Certificate Setup
 echo "🔐 Setting up SSL certificates..."
@@ -42,6 +42,9 @@ else
     echo "⚠️  SSL setup script not found, using HTTP-only configuration"
     cp /app/docker/default.conf /etc/nginx/conf.d/default.conf
 fi
+
+# Continue with startup regardless of permission issues
+echo "🚀 Continuing with service startup..."
 
 # Test Nginx configuration
 echo "🧪 Testing Nginx configuration..."

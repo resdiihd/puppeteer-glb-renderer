@@ -18,9 +18,9 @@ echo "  - SSL: $([ -n "$CLOUDFLARE_API_TOKEN" ] && echo "Enabled (Cloudflare)" |
 # Create necessary directories
 mkdir -p /app/storage/uploads /app/storage/renders /var/log/nginx /var/log/pm2 /etc/ssl/certs /etc/ssl/private /acme
 
-# Set proper permissions
+# Set proper permissions (nginx user exists in Alpine)
 chown -R nginx:nginx /var/log/nginx /acme || true
-chown -R node:node /app/storage /var/log/pm2 || true
+chown -R nginx:nginx /app/storage /var/log/pm2 || true
 chmod -R 755 /app/storage
 
 # SSL Certificate Setup

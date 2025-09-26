@@ -54,9 +54,11 @@ COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/default.conf /etc/nginx/conf.d/default.conf
 COPY docker/ssl.conf /app/docker/ssl.conf
 
-# Create nginx user and set permissions (nginx user already exists in alpine image)
-RUN chown -R nginx:nginx /app/storage /var/cache/nginx /var/log/nginx || true
-RUN chmod -R 755 /app/storage
+# Create necessary directories and set permissions
+RUN mkdir -p /app/storage/uploads /app/storage/renders /app/logs \
+    && chown -R nginx:nginx /app \
+    && chmod -R 755 /app/storage \
+    && chmod -R 755 /app/logs
 
 # Install PM2 globally for process management
 RUN npm install -g pm2

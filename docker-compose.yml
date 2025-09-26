@@ -17,13 +17,14 @@ services:
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
       - DOMAIN=3d.itsoa.io.vn
-      - CLOUDFLARE_TOKEN=3YeqmF46MSojOcJ6zi7rjlQpyKZGC-cXRLgO_AWj
+      - CLOUDFLARE_API_TOKEN=3YeqmF46MSojOcJ6zi7rjlQpyKZGC-cXRLgO_AWj
+      - ACME_EMAIL=admin@itsoa.io.vn
     volumes:
       - glb_storage:/app/storage
       - nginx_logs:/var/log/nginx
       - pm2_logs:/var/log/pm2
-      - ssl_certs:/etc/ssl/certs:ro
-      - ssl_private:/etc/ssl/private:ro
+      - ssl_data:/etc/ssl
+      - acme_data:/acme
     networks:
       - glb_network
     healthcheck:
@@ -51,9 +52,9 @@ volumes:
     driver: local
   pm2_logs:
     driver: local
-  ssl_certs:
+  ssl_data:
     driver: local
-  ssl_private:
+  acme_data:
     driver: local
 
 networks:

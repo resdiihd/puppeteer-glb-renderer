@@ -18,7 +18,24 @@ RUN mkdir -p storage/uploads storage/renders
 FROM nginx:alpine AS production
 
 # Install Node.js in Nginx container
-RUN apk add --no-cache nodejs npm chromium nss freetype freetype-dev harfbuzz ca-certificates ttf-freefont curl
+# Install Node.js and SSL tools
+RUN apk add --no-cache \
+    nodejs \
+    npm \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    curl \
+    bash \
+    openssl \
+    certbot \
+    py3-pip \
+    cronie \
+    && pip3 install certbot-dns-cloudflare
 
 # Create app directory
 WORKDIR /app
@@ -26,9 +43,10 @@ WORKDIR /app
 # Copy Node.js application from builder stage
 COPY --from=node-builder /app /app
 
-# Copy Nginx configuration
+# Copy Nginx configurations
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY docker/default.conf /etc/nginx/conf.d/default.conf
+COPY docker/ssl.conf /app/docker/ssl.conf
 
 # Create nginx user and set permissions (nginx user already exists in alpine image)
 RUN chown -R nginx:nginx /app/storage /var/cache/nginx /var/log/nginx || true
@@ -37,8 +55,9 @@ RUN chmod -R 755 /app/storage
 # Install PM2 globally for process management
 RUN npm install -g pm2
 
-# Copy PM2 ecosystem configuration
-COPY docker/ecosystem.config.js /app/
+# Copy PM2 ecosystem and SSL setup
+COPY docker/ecosystem.config.js /app/docker/
+COPY docker/ssl-setup.sh /app/docker/
 
 # Copy startup script
 COPY docker/start.sh /app/docker/start.sh

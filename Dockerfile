@@ -34,9 +34,17 @@ FROM nginx:alpine AS production
         openssl \
         certbot \
         py3-pip \
-        py3-certbot-dns-cloudflare \
-        cronie# Create app directory
-WORKDIR /app
+        python3-dev \
+        gcc \
+        musl-dev \
+        libffi-dev \
+        cronie \
+        && python3 -m venv /opt/certbot \
+        && /opt/certbot/bin/pip install certbot-dns-cloudflare \
+        && ln -s /opt/certbot/bin/certbot /usr/local/bin/certbot-dns-cloudflare
+
+    # Create app directory
+    WORKDIR /app
 
 # Copy Node.js application from builder stage
 COPY --from=node-builder /app /app

@@ -37,8 +37,8 @@ if [ -f "/app/docker/ssl-setup.sh" ]; then
         echo "✅ SSL certificates configured successfully"
         # Choose SSL configuration based on IP whitelist setting
         if [ -n "$ALLOWED_IPS" ]; then
-            echo "🔒 Using SSL configuration with IP whitelist: $ALLOWED_IPS"
-            cp /app/docker/ssl-whitelist.conf /etc/nginx/conf.d/default.conf
+            echo "🔒 Using SSL configuration with Cloudflare-compatible IP whitelist: $ALLOWED_IPS"
+            cp /app/docker/ssl-cloudflare.conf /etc/nginx/conf.d/default.conf
             # Copy custom error page
             mkdir -p /usr/share/nginx/html
             cp /app/docker/403.html /usr/share/nginx/html/403.html

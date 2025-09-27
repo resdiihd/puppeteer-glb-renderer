@@ -29,11 +29,34 @@ fi
 
 # 3. Restart Docker services
 echo "🐳 Restarting Docker container..."
-cd /home/RD/puppeteer-glb-renderer 2>/dev/null || cd /root/puppeteer-glb-renderer 2>/dev/null || {
-    echo "❌ Cannot find project directory. Please run this from the project folder."
-    exit 1
-}
 
+# Try multiple possible project locations
+PROJECT_DIR=""
+for dir in "/home/RD/puppeteer-glb-renderer" "/root/puppeteer-glb-renderer" "$PWD"; do
+    if [ -f "$dir/docker-compose.yml" ]; then
+        PROJECT_DIR="$dir"
+        break
+    fi
+done
+
+if [ -z "$PROJECT_DIR" ]; then
+    echo "❌ Cannot find project directory with docker-compose.yml"
+    echo "   Please run this script from the project directory"
+    echo "   Or ensure docker-compose.yml exists in:"
+    echo "   - /home/RD/puppeteer-glb-renderer"
+    echo "   - /root/puppeteer-glb-renderer" 
+    echo "   - Current directory: $PWD"
+    exit 1
+fi
+
+echo "📁 Using project directory: $PROJECT_DIR"
+cd "$PROJECT_DIR"
+
+# Pull latest code
+echo "📦 Pulling latest code..."
+git pull origin main >/dev/null 2>&1 && echo "  Code updated ✅" || echo "  Code update failed ⚠️"
+
+# Restart container
 docker compose down >/dev/null 2>&1
 sleep 5
 docker compose up -d >/dev/null 2>&1 && echo "  Container restarted ✅" || echo "  Container restart failed ❌"

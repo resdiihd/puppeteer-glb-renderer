@@ -3,8 +3,9 @@ const logger = require('../utils/logger');
 const { AppError } = require('./errorHandler');
 
 /**
- * IP Whitelist Middleware
- * Restricts access to specified IP addresses
+ * IP Whitelist Middleware with Cloudflare Support
+ * - Allows Cloudflare IPs to connect to server
+ * - Restricts end-user access based on CF-Connecting-IP header
  */
 const ipWhitelist = (req, res, next) => {
     // Skip IP checking for health endpoint and in development
@@ -12,18 +13,41 @@ const ipWhitelist = (req, res, next) => {
         return next();
     }
 
-    // Get client IP (handle various proxy headers)
+    // Get real client IP from Cloudflare headers
     const getClientIP = (req) => {
-        return req.headers['cf-connecting-ip'] ||     // Cloudflare
-               req.headers['x-forwarded-for']?.split(',')[0]?.trim() || // Standard proxy
-               req.headers['x-real-ip'] ||            // Nginx proxy
-               req.connection?.remoteAddress ||       // Direct connection
+        // Priority order: Cloudflare -> Standard proxy headers -> Direct connection
+        return req.headers['cf-connecting-ip'] ||           // Real user IP from Cloudflare
+               req.headers['x-forwarded-for']?.split(',')[0]?.trim() || 
+               req.headers['x-real-ip'] ||                  
+               req.connection?.remoteAddress ||
+               req.socket?.remoteAddress ||
+               req.ip;
+    };
+
+    // Get server IP (the IP that connected to nginx/server)
+    const getServerIP = (req) => {
+        return req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+               req.headers['x-real-ip'] ||
+               req.connection?.remoteAddress ||
                req.socket?.remoteAddress ||
                req.ip;
     };
 
     const clientIP = getClientIP(req);
+    const serverIP = getServerIP(req);
+    const isFromCloudflare = req.headers['cf-connecting-ip'] ? true : false;
+
     const allowedIPs = process.env.ALLOWED_IPS ? process.env.ALLOWED_IPS.split(',').map(ip => ip.trim()) : [];
+
+    // Log request details
+    logger.info('IP whitelist check', {
+        requestId: req.id,
+        clientIP,
+        serverIP,
+        isFromCloudflare,
+        path: req.path,
+        userAgent: req.get('User-Agent')?.substring(0, 100)
+    });
 
     // If no IPs are configured, allow all
     if (allowedIPs.length === 0) {
@@ -35,11 +59,10 @@ const ipWhitelist = (req, res, next) => {
         return next();
     }
 
-    // Check if client IP is in whitelist
+    // Check if client IP (real user IP) is in whitelist
     const isAllowed = allowedIPs.some(allowedIP => {
-        // Handle CIDR notation (basic implementation)
         if (allowedIP.includes('/')) {
-            // For now, exact match - can be extended for subnet matching
+            // Basic CIDR support - can be enhanced
             return clientIP === allowedIP.split('/')[0];
         }
         return clientIP === allowedIP;
@@ -49,6 +72,8 @@ const ipWhitelist = (req, res, next) => {
         logger.info('IP access granted', {
             requestId: req.id,
             clientIP,
+            serverIP,
+            isFromCloudflare,
             url: req.originalUrl,
             allowedIPs
         });
@@ -57,6 +82,8 @@ const ipWhitelist = (req, res, next) => {
         logger.warn('IP access denied', {
             requestId: req.id,
             clientIP,
+            serverIP,
+            isFromCloudflare,
             url: req.originalUrl,
             allowedIPs,
             userAgent: req.get('User-Agent')
@@ -66,8 +93,10 @@ const ipWhitelist = (req, res, next) => {
             success: false,
             error: 'Access denied',
             message: 'Your IP address is not authorized to access this service',
+            clientIP: clientIP,
             requestId: req.id,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            info: 'This service is restricted to authorized company IP addresses. Please contact your administrator if you need access.'
         });
     }
 };

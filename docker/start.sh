@@ -35,8 +35,17 @@ if [ -f "/app/docker/ssl-setup.sh" ]; then
         cp /app/docker/default.conf /etc/nginx/conf.d/default.conf
     else
         echo "✅ SSL certificates configured successfully"
-        # Use SSL configuration
-        cp /app/docker/ssl.conf /etc/nginx/conf.d/default.conf
+        # Choose SSL configuration based on IP whitelist setting
+        if [ -n "$ALLOWED_IPS" ]; then
+            echo "🔒 Using SSL configuration with IP whitelist: $ALLOWED_IPS"
+            cp /app/docker/ssl-whitelist.conf /etc/nginx/conf.d/default.conf
+            # Copy custom error page
+            mkdir -p /usr/share/nginx/html
+            cp /app/docker/403.html /usr/share/nginx/html/403.html
+        else
+            echo "🌐 Using SSL configuration without IP restrictions"
+            cp /app/docker/ssl.conf /etc/nginx/conf.d/default.conf
+        fi
     fi
 else
     echo "⚠️  SSL setup script not found, using HTTP-only configuration"

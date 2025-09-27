@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require('uuid');
 const config = require('./config/config');
 const logger = require('./utils/logger');
 const { errorHandler, AppError } = require('./middleware/errorHandler');
+const ipWhitelist = require('./middleware/ipWhitelist');
 const uploadRoutes = require('./routes/upload');
 const renderRoutes = require('./routes/render');
 const healthRoutes = require('./routes/health');
@@ -76,6 +77,9 @@ class GLBRendererServer {
             });
             next();
         });
+
+        // IP Whitelist middleware (after request logging)
+        this.app.use(ipWhitelist);
 
         // Static file serving
         this.app.use('/storage', express.static(config.storage.path, {

@@ -136,33 +136,60 @@ class GLBRendererServer {
         const port = config.server.port;
         const host = config.server.host;
 
-        this.server = this.app.listen(port, host, () => {
-            logger.info(`GLB Renderer Server started`, {
-                port,
-                host,
-                environment: process.env.NODE_ENV || 'development',
-                version: '2.0.0'
-            });
-        });
-
-        // Graceful shutdown handling
-        const gracefulShutdown = (signal) => {
-            logger.info(`Received ${signal}, starting graceful shutdown...`);
-            
-            this.server.close(() => {
-                logger.info('Server closed successfully');
-                process.exit(0);
+        try {
+            this.server = this.app.listen(port, host, () => {
+                logger.info(`GLB Renderer Server started successfully`, {
+                    port,
+                    host,
+                    environment: process.env.NODE_ENV || 'development',
+                    version: '2.0.0',
+                    pid: process.pid
+                });
             });
 
-            // Force close after 10 seconds
-            setTimeout(() => {
-                logger.error('Force closing server after timeout');
+            this.server.on('error', (error) => {
+                if (error.code === 'EADDRINUSE') {
+                    logger.error(`Port ${port} is already in use`, { port, host });
+                } else {
+                    logger.error('Server error:', error);
+                }
                 process.exit(1);
-            }, 10000);
-        };
+            });
 
-        process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-        process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+            // Graceful shutdown handling
+            const gracefulShutdown = (signal) => {
+                logger.info(`Received ${signal}, starting graceful shutdown...`);
+                
+                this.server.close(() => {
+                    logger.info('Server closed successfully');
+                    process.exit(0);
+                });
+
+                // Force close after 10 seconds
+                setTimeout(() => {
+                    logger.error('Force closing server after timeout');
+                    process.exit(1);
+                }, 10000);
+            };
+
+            process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+            process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+            
+            // Handle uncaught exceptions
+            process.on('uncaughtException', (error) => {
+                logger.error('Uncaught Exception:', error);
+                process.exit(1);
+            });
+            
+            process.on('unhandledRejection', (reason, promise) => {
+                logger.error('Unhandled Rejection at Promise:', { promise, reason });
+                process.exit(1);
+            });
+
+        } catch (error) {
+            logger.error('Failed to start server:', error);
+            process.exit(1);
+        }
     }
 }
 
@@ -170,6 +197,19 @@ module.exports = GLBRendererServer;
 
 // Start server if this file is run directly
 if (require.main === module) {
-    const server = new GLBRendererServer();
-    server.start();
+    try {
+        console.log('🚀 Initializing GLB Renderer Server...');
+        console.log('📁 Current directory:', process.cwd());
+        console.log('📋 Environment:', process.env.NODE_ENV || 'development');
+        console.log('🔌 Port:', process.env.PORT || 3000);
+        
+        const server = new GLBRendererServer();
+        server.start();
+        
+        console.log('✅ Server initialization completed');
+    } catch (error) {
+        console.error('❌ Failed to start server:', error);
+        console.error('Stack trace:', error.stack);
+        process.exit(1);
+    }
 }

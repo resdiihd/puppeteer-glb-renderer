@@ -60,26 +60,59 @@ cd /app
 export NODE_ENV=$NODE_ENV
 export DOMAIN=$DOMAIN
 
-# Start PM2 process in background
-pm2 start /app/docker/ecosystem.config.js --env $NODE_ENV &
+# Install missing dependencies if needed
+if [ ! -d "/app/node_modules" ]; then
+    echo "📦 Installing Node.js dependencies..."
+    npm install --production --silent
+fi
 
-# Wait for application to start
+# Check for critical files
+if [ ! -f "/app/src/app.js" ]; then
+    echo "❌ Critical file /app/src/app.js not found!"
+    ls -la /app/src/
+    exit 1
+fi
+
+# Start PM2 process with verbose logging
+echo "📦 Starting Node.js application with PM2..."
+pm2 start /app/docker/ecosystem.config.js --env $NODE_ENV
+
+# Wait a moment for PM2 to initialize
+sleep 5
+
+# Check PM2 status
+echo "📊 PM2 Process Status:"
+pm2 list
+
+# Show initial logs
+echo "📋 Initial application logs:"
+pm2 logs --lines 20 --raw
+
+# Health check with better error reporting
 echo "⏳ Waiting for application to start..."
-sleep 15
-
-# Health check
-for i in {1..20}; do
+for i in {1..30}; do
     if curl -f -s http://localhost:3000/health >/dev/null 2>&1; then
         echo "✅ Node.js application started successfully!"
         break
     else
-        if [ $i -eq 20 ]; then
-            echo "❌ Application failed to start after 20 attempts"
-            pm2 logs --lines 50
+        if [ $i -eq 30 ]; then
+            echo "❌ Application failed to start after 30 attempts"
+            echo "📋 Recent PM2 logs:"
+            pm2 logs --lines 100 --raw
+            echo "📊 PM2 Process Status:"
+            pm2 list
+            echo "🔍 Port status:"
+            netstat -tulpn | grep :3000 || echo "No process listening on port 3000"
             exit 1
         fi
-        echo "⏳ Waiting for application... (attempt $i/20)"
-        sleep 3
+        if [ $((i % 5)) -eq 0 ]; then
+            echo "⏳ Still waiting... (attempt $i/30) - checking PM2 status"
+            pm2 list
+            pm2 logs --lines 5 --raw
+        else
+            echo "⏳ Waiting for application... (attempt $i/30)"
+        fi
+        sleep 2
     fi
 done
 
